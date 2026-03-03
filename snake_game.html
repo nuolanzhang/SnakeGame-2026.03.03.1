@@ -1,0 +1,1198 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>贪吃蛇</title>
+    <style>
+      :root {
+        --bg0: #0b1020;
+        --bg1: #101b3a;
+        --panel: rgba(255, 255, 255, 0.08);
+        --panel2: rgba(255, 255, 255, 0.06);
+        --border: rgba(255, 255, 255, 0.12);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.65);
+        --accent: #ff4d6d;
+        --accent2: #32d6c9;
+        --warn: #ffb703;
+        --danger: #ff2d55;
+        --shadow: rgba(0, 0, 0, 0.35);
+        --radius: 18px;
+        --radius2: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+          "Apple Color Emoji", "Segoe UI Emoji";
+        background: radial-gradient(1200px 600px at 20% 10%, rgba(50, 214, 201, 0.18), transparent 60%),
+          radial-gradient(900px 500px at 80% 20%, rgba(255, 77, 109, 0.18), transparent 55%),
+          linear-gradient(135deg, var(--bg0), var(--bg1));
+        display: grid;
+        place-items: center;
+        padding: 18px;
+      }
+
+      .wrap {
+        width: min(980px, 100%);
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 16px;
+        align-items: start;
+      }
+
+      @media (max-width: 860px) {
+        .wrap {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: 0 10px 40px var(--shadow);
+        backdrop-filter: blur(10px);
+      }
+
+      .gameCard {
+        padding: 16px;
+      }
+
+      .sideCard {
+        padding: 16px;
+      }
+
+      .titleRow {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+
+      .title {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+
+      .title h1 {
+        margin: 0;
+        font-size: 22px;
+        letter-spacing: 0.2px;
+      }
+
+      .badge {
+        font-size: 12px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(0, 0, 0, 0.18);
+        color: var(--muted);
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      @media (max-width: 520px) {
+        .stats {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      .stat {
+        padding: 12px;
+        border-radius: var(--radius2);
+        background: var(--panel2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        min-height: 58px;
+      }
+
+      .stat .k {
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+
+      .stat .v {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        font-size: 20px;
+        font-weight: 800;
+      }
+
+      .stat .sub {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.55);
+        font-weight: 600;
+      }
+
+      .canvasWrap {
+        position: relative;
+        border-radius: var(--radius);
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(0, 0, 0, 0.26);
+        box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.35);
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        touch-action: none;
+      }
+
+      .hintOverlay {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        pointer-events: none;
+        padding: 18px;
+      }
+
+      .hintBox {
+        width: min(520px, 100%);
+        text-align: center;
+        border-radius: 16px;
+        padding: 14px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(8, 10, 18, 0.52);
+        backdrop-filter: blur(8px);
+      }
+
+      .hintBox .big {
+        font-weight: 900;
+        font-size: 18px;
+        margin-bottom: 6px;
+      }
+
+      .hintBox .small {
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .controlsRow {
+        margin-top: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .btns {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      button,
+      select {
+        appearance: none;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 12px;
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+        font-weight: 750;
+        letter-spacing: 0.2px;
+        cursor: pointer;
+        transition: transform 120ms ease, background 120ms ease, border-color 120ms ease,
+          opacity 120ms ease;
+        user-select: none;
+      }
+
+      button.primary {
+        border-color: rgba(255, 77, 109, 0.5);
+        background: linear-gradient(135deg, rgba(255, 77, 109, 0.9), rgba(255, 77, 109, 0.55));
+        box-shadow: 0 10px 24px rgba(255, 77, 109, 0.22);
+      }
+
+      button:hover,
+      select:hover {
+        transform: translateY(-1px);
+        border-color: rgba(255, 255, 255, 0.22);
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      button:active,
+      select:active {
+        transform: translateY(0);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .rightTop {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 10px 0;
+        flex-wrap: wrap;
+      }
+
+      .label {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .kbd {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      kbd {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+          "Courier New", monospace;
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.12);
+        margin: 12px 0;
+      }
+
+      .tips {
+        font-size: 13px;
+        line-height: 1.6;
+        color: rgba(255, 255, 255, 0.78);
+      }
+
+      .tips strong {
+        color: rgba(255, 255, 255, 0.92);
+      }
+
+      .touchPad {
+        margin-top: 12px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .dpad {
+        display: grid;
+        grid-template-columns: 56px 56px 56px;
+        grid-template-rows: 56px 56px 56px;
+        gap: 8px;
+        justify-content: center;
+        align-items: center;
+        margin: 0 auto;
+      }
+
+      .dpad button {
+        width: 56px;
+        height: 56px;
+        padding: 0;
+        border-radius: 14px;
+        font-size: 18px;
+        font-weight: 900;
+      }
+
+      .dpad button.center {
+        opacity: 0.35;
+        cursor: default;
+      }
+
+      .dpad button.center:hover {
+        transform: none;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 18px;
+        transform: translateX(-50%);
+        background: rgba(10, 12, 20, 0.78);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 999px;
+        padding: 10px 14px;
+        color: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(10px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 160ms ease, transform 160ms ease;
+        transform-origin: center;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(-2px);
+      }
+
+      .overlay {
+        position: fixed;
+        inset: 0;
+        display: none;
+        place-items: center;
+        background: rgba(0, 0, 0, 0.72);
+        z-index: 50;
+        padding: 18px;
+      }
+
+      .overlay.show {
+        display: grid;
+      }
+
+      .modal {
+        width: min(520px, 100%);
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: linear-gradient(180deg, rgba(14, 18, 33, 0.92), rgba(10, 12, 20, 0.92));
+        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
+        padding: 18px;
+      }
+
+      .modal h2 {
+        margin: 0 0 10px;
+        font-size: 22px;
+        color: rgba(255, 255, 255, 0.95);
+      }
+
+      .modal p {
+        margin: 8px 0;
+        color: rgba(255, 255, 255, 0.8);
+        line-height: 1.6;
+      }
+
+      .modal .scoreLine {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .modal .scoreLine .num {
+        font-size: 24px;
+        font-weight: 900;
+        letter-spacing: 0.2px;
+      }
+
+      .modal .actions {
+        margin-top: 14px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <section class="card gameCard">
+        <div class="titleRow">
+          <div class="title">
+            <h1>贪吃蛇</h1>
+            <span class="badge" id="statusBadge">未开始</span>
+          </div>
+          <div class="rightTop">
+            <label class="label" for="difficulty">难度</label>
+            <select id="difficulty" aria-label="选择难度">
+              <option value="easy">简单</option>
+              <option value="normal" selected>普通</option>
+              <option value="hard">困难</option>
+              <option value="insane">地狱</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="stats" aria-live="polite">
+          <div class="stat">
+            <div class="k">当前分数</div>
+            <div class="v">
+              <span id="score">0</span>
+              <span class="sub" id="comboHint">+10</span>
+            </div>
+          </div>
+          <div class="stat">
+            <div class="k">最高分</div>
+            <div class="v">
+              <span id="highScore">0</span>
+              <span class="sub" id="bestHint">本地保存</span>
+            </div>
+          </div>
+          <div class="stat">
+            <div class="k">速度</div>
+            <div class="v">
+              <span id="speedLabel">x1.0</span>
+              <span class="sub" id="tickLabel">120ms</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="canvasWrap">
+          <canvas id="canvas" width="520" height="520" aria-label="贪吃蛇画布"></canvas>
+          <div class="hintOverlay" id="hintOverlay">
+            <div class="hintBox">
+              <div class="big">点击「开始」或按 <kbd>Enter</kbd></div>
+              <div class="small">
+                方向键 / WASD 控制，<kbd>Space</kbd> 暂停/继续，<kbd>R</kbd> 重开。<br />
+                手机可滑动或用方向键盘。
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="controlsRow">
+          <div class="btns">
+            <button class="primary" id="startBtn">开始</button>
+            <button id="pauseBtn" disabled>暂停</button>
+            <button id="restartBtn" disabled>重开</button>
+          </div>
+          <div class="btns">
+            <button id="soundBtn" title="切换音效（可选）">音效：关</button>
+            <button id="wrapBtn" title="切换穿墙模式">穿墙：关</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="card sideCard">
+        <div class="row">
+          <div>
+            <div class="label">操作</div>
+            <div class="kbd" style="margin-top: 6px">
+              <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>
+              <kbd>Space</kbd> 暂停
+              <kbd>Enter</kbd> 开始
+              <kbd>R</kbd> 重开
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="tips">
+          <p style="margin: 0 0 10px">
+            <strong>规则</strong>：吃到食物 +10 分并变长；撞到自己（或撞墙，除非开启穿墙）则结束。
+          </p>
+          <p style="margin: 0 0 10px">
+            <strong>加速</strong>：每吃 5 个食物会略微加速（不同难度上限不同）。
+          </p>
+          <p style="margin: 0">
+            <strong>小技巧</strong>：提前拐弯更稳；长蛇优先走“回字”路线，减少自撞风险。
+          </p>
+        </div>
+
+        <div class="touchPad" aria-label="触屏方向控制">
+          <div class="label">触屏方向键</div>
+          <div class="dpad">
+            <div></div>
+            <button id="upBtn" aria-label="向上">↑</button>
+            <div></div>
+            <button id="leftBtn" aria-label="向左">←</button>
+            <button class="center" tabindex="-1" aria-hidden="true">•</button>
+            <button id="rightBtn" aria-label="向右">→</button>
+            <div></div>
+            <button id="downBtn" aria-label="向下">↓</button>
+            <div></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="overlay" id="gameOverOverlay" role="dialog" aria-modal="true" aria-label="游戏结束">
+      <div class="modal">
+        <h2>游戏结束</h2>
+        <p id="gameOverReason">你撞到了什么东西。</p>
+        <div class="scoreLine">
+          <span>本局分数</span>
+          <span class="num" id="finalScore">0</span>
+        </div>
+        <div class="scoreLine">
+          <span>最高分</span>
+          <span class="num" id="finalHighScore">0</span>
+        </div>
+        <div class="actions">
+          <button id="closeOverlayBtn">关闭</button>
+          <button class="primary" id="playAgainBtn">再来一局</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      (() => {
+        "use strict";
+
+        const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+        const now = () => performance.now();
+
+        function drawRoundRect(ctx, x, y, w, h, r) {
+          const rr = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+          ctx.beginPath();
+          ctx.moveTo(x + rr, y);
+          ctx.arcTo(x + w, y, x + w, y + h, rr);
+          ctx.arcTo(x + w, y + h, x, y + h, rr);
+          ctx.arcTo(x, y + h, x, y, rr);
+          ctx.arcTo(x, y, x + w, y, rr);
+          ctx.closePath();
+        }
+
+        const DIRS = {
+          up: { x: 0, y: -1 },
+          down: { x: 0, y: 1 },
+          left: { x: -1, y: 0 },
+          right: { x: 1, y: 0 }
+        };
+
+        const KEY_TO_DIR = new Map([
+          ["ArrowUp", "up"],
+          ["ArrowDown", "down"],
+          ["ArrowLeft", "left"],
+          ["ArrowRight", "right"],
+          ["w", "up"],
+          ["W", "up"],
+          ["s", "down"],
+          ["S", "down"],
+          ["a", "left"],
+          ["A", "left"],
+          ["d", "right"],
+          ["D", "right"]
+        ]);
+
+        class AudioBeep {
+          constructor() {
+            this.enabled = false;
+            this.ctx = null;
+            this.master = null;
+          }
+
+          setEnabled(on) {
+            this.enabled = !!on;
+            if (!this.enabled) return;
+            if (!this.ctx) {
+              const AC = window.AudioContext || window.webkitAudioContext;
+              if (!AC) return;
+              this.ctx = new AC();
+              this.master = this.ctx.createGain();
+              this.master.gain.value = 0.12;
+              this.master.connect(this.ctx.destination);
+            }
+            if (this.ctx && this.ctx.state === "suspended") {
+              this.ctx.resume().catch(() => {});
+            }
+          }
+
+          beep(freq, durMs, type = "sine") {
+            if (!this.enabled || !this.ctx || !this.master) return;
+            const t0 = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0, t0);
+            gain.gain.linearRampToValueAtTime(1, t0 + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t0 + durMs / 1000);
+            osc.connect(gain);
+            gain.connect(this.master);
+            osc.start(t0);
+            osc.stop(t0 + durMs / 1000);
+          }
+        }
+
+        class SnakeGame {
+          constructor() {
+            this.canvas = document.getElementById("canvas");
+            this.ctx = this.canvas.getContext("2d", { alpha: false });
+
+            this.scoreEl = document.getElementById("score");
+            this.highScoreEl = document.getElementById("highScore");
+            this.speedLabelEl = document.getElementById("speedLabel");
+            this.tickLabelEl = document.getElementById("tickLabel");
+            this.comboHintEl = document.getElementById("comboHint");
+            this.statusBadgeEl = document.getElementById("statusBadge");
+            this.hintOverlayEl = document.getElementById("hintOverlay");
+
+            this.startBtn = document.getElementById("startBtn");
+            this.pauseBtn = document.getElementById("pauseBtn");
+            this.restartBtn = document.getElementById("restartBtn");
+            this.soundBtn = document.getElementById("soundBtn");
+            this.wrapBtn = document.getElementById("wrapBtn");
+            this.difficultyEl = document.getElementById("difficulty");
+
+            this.toastEl = document.getElementById("toast");
+            this.gameOverOverlay = document.getElementById("gameOverOverlay");
+            this.finalScoreEl = document.getElementById("finalScore");
+            this.finalHighScoreEl = document.getElementById("finalHighScore");
+            this.gameOverReasonEl = document.getElementById("gameOverReason");
+            this.playAgainBtn = document.getElementById("playAgainBtn");
+            this.closeOverlayBtn = document.getElementById("closeOverlayBtn");
+
+            this.audio = new AudioBeep();
+            this.soundEnabled = false;
+
+            this.wrapWalls = false;
+
+            this.difficulties = {
+              easy: { baseTick: 150, minTick: 75, accelEveryFoods: 5, accelMs: 6, grid: 22 },
+              normal: { baseTick: 120, minTick: 55, accelEveryFoods: 5, accelMs: 7, grid: 24 },
+              hard: { baseTick: 95, minTick: 40, accelEveryFoods: 4, accelMs: 8, grid: 26 },
+              insane: { baseTick: 75, minTick: 30, accelEveryFoods: 3, accelMs: 9, grid: 28 }
+            };
+
+            this.state = "idle"; // idle | running | paused | over
+            this.difficulty = this.difficultyEl.value || "normal";
+            this.tickMs = this.difficulties[this.difficulty].baseTick;
+
+            this.gridCount = this.difficulties[this.difficulty].grid;
+            this.cell = 20; // will be derived on resize
+            this.gridW = this.gridCount;
+            this.gridH = this.gridCount;
+
+            this.snake = [];
+            this.dir = { ...DIRS.right };
+            this.nextDir = { ...DIRS.right };
+            this.food = { x: 0, y: 0 };
+            this.foodsEaten = 0;
+
+            this.score = 0;
+            this.highScore = 0;
+
+            this.acc = 0;
+            this.lastTs = 0;
+            this.raf = 0;
+
+            this.touchStart = null;
+            this.toastTimer = 0;
+
+            this.loadHighScore();
+            this.bind();
+            this.resetRound(true);
+            this.resizeCanvas();
+            this.render();
+          }
+
+          bind() {
+            window.addEventListener("resize", () => this.resizeCanvas());
+
+            this.startBtn.addEventListener("click", () => this.start());
+            this.pauseBtn.addEventListener("click", () => this.togglePause());
+            this.restartBtn.addEventListener("click", () => this.restart());
+
+            this.soundBtn.addEventListener("click", () => {
+              this.soundEnabled = !this.soundEnabled;
+              this.audio.setEnabled(this.soundEnabled);
+              this.soundBtn.textContent = `音效：${this.soundEnabled ? "开" : "关"}`;
+              this.toast(this.soundEnabled ? "音效已开启" : "音效已关闭");
+            });
+
+            this.wrapBtn.addEventListener("click", () => {
+              this.wrapWalls = !this.wrapWalls;
+              this.wrapBtn.textContent = `穿墙：${this.wrapWalls ? "开" : "关"}`;
+              this.toast(this.wrapWalls ? "已开启穿墙" : "已关闭穿墙");
+            });
+
+            this.difficultyEl.addEventListener("change", () => {
+              if (this.state === "running") {
+                this.toast("游戏进行中无法切换难度");
+                this.difficultyEl.value = this.difficulty;
+                return;
+              }
+              this.difficulty = this.difficultyEl.value;
+              this.tickMs = this.difficulties[this.difficulty].baseTick;
+              this.gridCount = this.difficulties[this.difficulty].grid;
+              this.gridW = this.gridCount;
+              this.gridH = this.gridCount;
+              this.resetRound(true);
+              this.resizeCanvas();
+              this.render();
+              this.toast(`难度已切换：${this.difficultyLabel(this.difficulty)}`);
+            });
+
+            document.addEventListener("keydown", (e) => {
+              const k = e.key;
+              if (KEY_TO_DIR.has(k) || k === " " || k === "Enter" || k === "r" || k === "R") {
+                e.preventDefault();
+              }
+
+              if (k === "Enter") {
+                if (this.state === "idle" || this.state === "over") this.start();
+                return;
+              }
+
+              if (k === " ") {
+                if (this.state === "running" || this.state === "paused") this.togglePause();
+                return;
+              }
+
+              if (k === "r" || k === "R") {
+                this.restart();
+                return;
+              }
+
+              const dirKey = KEY_TO_DIR.get(k);
+              if (!dirKey) return;
+              this.queueDir(dirKey);
+              if (this.state === "idle") this.start();
+            });
+
+            const bindDirBtn = (id, dirKey) => {
+              const el = document.getElementById(id);
+              const fire = (ev) => {
+                ev.preventDefault();
+                this.queueDir(dirKey);
+                if (this.state === "idle") this.start();
+              };
+              el.addEventListener("pointerdown", fire);
+              el.addEventListener("click", fire);
+            };
+            bindDirBtn("upBtn", "up");
+            bindDirBtn("downBtn", "down");
+            bindDirBtn("leftBtn", "left");
+            bindDirBtn("rightBtn", "right");
+
+            this.canvas.addEventListener("pointerdown", (e) => {
+              this.canvas.setPointerCapture(e.pointerId);
+              this.touchStart = { x: e.clientX, y: e.clientY, t: now() };
+            });
+            this.canvas.addEventListener("pointermove", (e) => {
+              if (!this.touchStart) return;
+              const dx = e.clientX - this.touchStart.x;
+              const dy = e.clientY - this.touchStart.y;
+              const dist = Math.hypot(dx, dy);
+              if (dist < 14) return;
+
+              if (Math.abs(dx) > Math.abs(dy)) {
+                this.queueDir(dx > 0 ? "right" : "left");
+              } else {
+                this.queueDir(dy > 0 ? "down" : "up");
+              }
+              this.touchStart = { x: e.clientX, y: e.clientY, t: now() };
+              if (this.state === "idle") this.start();
+            });
+            this.canvas.addEventListener("pointerup", () => (this.touchStart = null));
+            this.canvas.addEventListener("pointercancel", () => (this.touchStart = null));
+
+            this.playAgainBtn.addEventListener("click", () => {
+              this.hideGameOver();
+              this.restart();
+              this.start();
+            });
+            this.closeOverlayBtn.addEventListener("click", () => this.hideGameOver());
+
+            this.gameOverOverlay.addEventListener("click", (e) => {
+              if (e.target === this.gameOverOverlay) this.hideGameOver();
+            });
+          }
+
+          difficultyLabel(key) {
+            return (
+              {
+                easy: "简单",
+                normal: "普通",
+                hard: "困难",
+                insane: "地狱"
+              }[key] || key
+            );
+          }
+
+          toast(msg) {
+            clearTimeout(this.toastTimer);
+            this.toastEl.textContent = msg;
+            this.toastEl.classList.add("show");
+            this.toastTimer = setTimeout(() => this.toastEl.classList.remove("show"), 1400);
+          }
+
+          loadHighScore() {
+            const raw = localStorage.getItem("snake.highScore.v1");
+            const n = raw ? parseInt(raw, 10) : 0;
+            this.highScore = Number.isFinite(n) ? n : 0;
+            this.highScoreEl.textContent = String(this.highScore);
+          }
+
+          saveHighScore() {
+            localStorage.setItem("snake.highScore.v1", String(this.highScore));
+            this.highScoreEl.textContent = String(this.highScore);
+          }
+
+          resizeCanvas() {
+            const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+            const wrap = this.canvas.parentElement;
+            const rect = wrap.getBoundingClientRect();
+            const size = Math.floor(Math.min(rect.width, 640));
+            const cssSize = clamp(size, 280, 640);
+
+            this.canvas.style.width = `${cssSize}px`;
+            this.canvas.style.height = `${cssSize}px`;
+            this.canvas.width = Math.floor(cssSize * dpr);
+            this.canvas.height = Math.floor(cssSize * dpr);
+
+            this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+            this.ctx.scale(dpr, dpr);
+
+            this.cell = Math.floor(cssSize / this.gridCount);
+            this.cell = clamp(this.cell, 12, 28);
+          }
+
+          resetRound(keepDifficultyTick = false) {
+            if (!keepDifficultyTick) {
+              this.tickMs = this.difficulties[this.difficulty].baseTick;
+            }
+
+            this.state = "idle";
+            this.score = 0;
+            this.foodsEaten = 0;
+            this.dir = { ...DIRS.right };
+            this.nextDir = { ...DIRS.right };
+            this.acc = 0;
+            this.lastTs = 0;
+
+            const mid = Math.floor(this.gridCount / 2);
+            this.snake = [
+              { x: mid + 1, y: mid },
+              { x: mid, y: mid },
+              { x: mid - 1, y: mid }
+            ];
+
+            this.spawnFood();
+            this.updateHUD();
+            this.updateButtons();
+            this.setStatusBadge("未开始");
+            this.hintOverlayEl.style.display = "grid";
+          }
+
+          updateHUD() {
+            this.scoreEl.textContent = String(this.score);
+            const add = 10;
+            this.comboHintEl.textContent = `+${add}`;
+            const base = this.difficulties[this.difficulty].baseTick;
+            const mult = base / this.tickMs;
+            this.speedLabelEl.textContent = `x${mult.toFixed(2)}`;
+            this.tickLabelEl.textContent = `${Math.round(this.tickMs)}ms`;
+          }
+
+          updateButtons() {
+            const running = this.state === "running";
+            const paused = this.state === "paused";
+            const idle = this.state === "idle";
+            this.startBtn.disabled = running || paused;
+            this.pauseBtn.disabled = idle || this.state === "over";
+            this.restartBtn.disabled = idle && this.score === 0;
+            this.pauseBtn.textContent = paused ? "继续" : "暂停";
+          }
+
+          setStatusBadge(text) {
+            this.statusBadgeEl.textContent = text;
+          }
+
+          start() {
+            if (this.state === "running") return;
+            if (this.state === "over") this.resetRound(true);
+            this.state = "running";
+            this.hintOverlayEl.style.display = "none";
+            this.updateButtons();
+            this.setStatusBadge("进行中");
+            this.audio.beep(520, 50, "triangle");
+            this.lastTs = now();
+            this.loop();
+          }
+
+          togglePause() {
+            if (this.state === "idle" || this.state === "over") return;
+            if (this.state === "running") {
+              this.state = "paused";
+              this.setStatusBadge("已暂停");
+              this.audio.beep(260, 60, "sine");
+              this.updateButtons();
+              this.render();
+              return;
+            }
+            if (this.state === "paused") {
+              this.state = "running";
+              this.setStatusBadge("进行中");
+              this.audio.beep(330, 60, "sine");
+              this.updateButtons();
+              this.lastTs = now();
+              this.loop();
+            }
+          }
+
+          restart() {
+            this.hideGameOver();
+            this.resetRound(true);
+            this.render();
+            this.toast("已重开");
+          }
+
+          hideGameOver() {
+            this.gameOverOverlay.classList.remove("show");
+          }
+
+          queueDir(dirKey) {
+            const wanted = DIRS[dirKey];
+            if (!wanted) return;
+            // 禁止 180° 反向
+            if (this.dir.x + wanted.x === 0 && this.dir.y + wanted.y === 0) return;
+            this.nextDir = { ...wanted };
+          }
+
+          spawnFood() {
+            const occupied = new Set(this.snake.map((p) => `${p.x},${p.y}`));
+            let x = 0;
+            let y = 0;
+            let guard = 0;
+            do {
+              x = Math.floor(Math.random() * this.gridCount);
+              y = Math.floor(Math.random() * this.gridCount);
+              guard++;
+              if (guard > 10000) break;
+            } while (occupied.has(`${x},${y}`));
+            this.food = { x, y };
+          }
+
+          loop() {
+            cancelAnimationFrame(this.raf);
+            const step = (ts) => {
+              if (this.state !== "running") return;
+              const dt = Math.min(48, ts - (this.lastTs || ts));
+              this.lastTs = ts;
+              this.acc += dt;
+              while (this.acc >= this.tickMs) {
+                this.acc -= this.tickMs;
+                if (!this.update()) break;
+              }
+              this.render();
+              this.raf = requestAnimationFrame(step);
+            };
+            this.raf = requestAnimationFrame(step);
+          }
+
+          update() {
+            this.dir = { ...this.nextDir };
+            const head = this.snake[0];
+            let nx = head.x + this.dir.x;
+            let ny = head.y + this.dir.y;
+
+            if (this.wrapWalls) {
+              nx = (nx + this.gridCount) % this.gridCount;
+              ny = (ny + this.gridCount) % this.gridCount;
+            } else {
+              if (nx < 0 || nx >= this.gridCount || ny < 0 || ny >= this.gridCount) {
+                this.endGame("你撞到了墙。");
+                return false;
+              }
+            }
+
+            const nextHead = { x: nx, y: ny };
+            const willEat = nx === this.food.x && ny === this.food.y;
+
+            // 自撞判定：不吃食物时，尾巴会在本 tick 移走，因此允许蛇头“进入尾巴格子”
+            const bodyToCheck = willEat ? this.snake : this.snake.slice(0, -1);
+            const hitBody = bodyToCheck.some((p) => p.x === nextHead.x && p.y === nextHead.y);
+            if (hitBody) {
+              this.endGame("你撞到了自己。");
+              return false;
+            }
+
+            this.snake.unshift(nextHead);
+            if (willEat) {
+              this.score += 10;
+              this.foodsEaten += 1;
+              this.audio.beep(740, 60, "square");
+              this.spawnFood();
+
+              const cfg = this.difficulties[this.difficulty];
+              if (this.foodsEaten % cfg.accelEveryFoods === 0) {
+                this.tickMs = Math.max(cfg.minTick, this.tickMs - cfg.accelMs);
+                this.audio.beep(920, 35, "triangle");
+              }
+
+              this.updateHUD();
+              this.restartBtn.disabled = false;
+            } else {
+              this.snake.pop();
+            }
+
+            return true;
+          }
+
+          endGame(reason) {
+            this.state = "over";
+            this.setStatusBadge("已结束");
+            this.updateButtons();
+            this.audio.beep(180, 120, "sawtooth");
+            this.audio.beep(140, 170, "sawtooth");
+
+            if (this.score > this.highScore) {
+              this.highScore = this.score;
+              this.saveHighScore();
+              this.toast("新纪录！");
+            }
+
+            this.finalScoreEl.textContent = String(this.score);
+            this.finalHighScoreEl.textContent = String(this.highScore);
+            this.gameOverReasonEl.textContent = reason || "游戏结束。";
+            this.gameOverOverlay.classList.add("show");
+            this.hintOverlayEl.style.display = "grid";
+            this.hintOverlayEl.querySelector(".big").textContent = "按 Enter 重新开始";
+          }
+
+          render() {
+            const ctx = this.ctx;
+            const cssW = parseFloat(this.canvas.style.width || "520");
+            const cssH = parseFloat(this.canvas.style.height || "520");
+
+            // background
+            ctx.fillStyle = "rgb(10, 12, 20)";
+            ctx.fillRect(0, 0, cssW, cssH);
+
+            // grid subtle
+            ctx.strokeStyle = "rgba(255,255,255,0.05)";
+            ctx.lineWidth = 1;
+            const cell = this.cell;
+            for (let i = 0; i <= this.gridCount; i++) {
+              const x = i * cell + 0.5;
+              ctx.beginPath();
+              ctx.moveTo(x, 0);
+              ctx.lineTo(x, this.gridCount * cell);
+              ctx.stroke();
+              const y = i * cell + 0.5;
+              ctx.beginPath();
+              ctx.moveTo(0, y);
+              ctx.lineTo(this.gridCount * cell, y);
+              ctx.stroke();
+            }
+
+            // food
+            const fx = this.food.x * cell;
+            const fy = this.food.y * cell;
+            const cx = fx + cell / 2;
+            const cy = fy + cell / 2;
+            const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, cell / 2);
+            g.addColorStop(0, "rgba(255, 183, 3, 1)");
+            g.addColorStop(1, "rgba(255, 45, 85, 1)");
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(cx, cy, Math.max(3, cell * 0.36), 0, Math.PI * 2);
+            ctx.fill();
+
+            // snake
+            for (let i = 0; i < this.snake.length; i++) {
+              const p = this.snake[i];
+              const x = p.x * cell;
+              const y = p.y * cell;
+              const isHead = i === 0;
+              const alpha = 1 - (i / Math.max(1, this.snake.length - 1)) * 0.45;
+              const pad = 1.5;
+
+              if (isHead) {
+                const hg = ctx.createLinearGradient(x, y, x + cell, y + cell);
+                hg.addColorStop(0, "rgba(50, 214, 201, 1)");
+                hg.addColorStop(1, "rgba(28, 165, 155, 1)");
+                ctx.fillStyle = hg;
+              } else {
+                ctx.fillStyle = `rgba(50, 214, 201, ${alpha})`;
+              }
+
+              drawRoundRect(ctx, x + pad, y + pad, cell - pad * 2, cell - pad * 2, isHead ? 7 : 5);
+              ctx.fill();
+
+              if (isHead) {
+                ctx.fillStyle = "rgba(255,255,255,0.95)";
+                const eyeR = Math.max(1.8, cell * 0.085);
+                const off = cell * 0.28;
+                let e1 = { x: x + off, y: y + off };
+                let e2 = { x: x + cell - off, y: y + off };
+                if (this.dir.x === 1) {
+                  e1 = { x: x + cell - off, y: y + off };
+                  e2 = { x: x + cell - off, y: y + cell - off };
+                } else if (this.dir.x === -1) {
+                  e1 = { x: x + off, y: y + off };
+                  e2 = { x: x + off, y: y + cell - off };
+                } else if (this.dir.y === 1) {
+                  e1 = { x: x + off, y: y + cell - off };
+                  e2 = { x: x + cell - off, y: y + cell - off };
+                } else if (this.dir.y === -1) {
+                  e1 = { x: x + off, y: y + off };
+                  e2 = { x: x + cell - off, y: y + off };
+                }
+                ctx.beginPath();
+                ctx.arc(e1.x, e1.y, eyeR, 0, Math.PI * 2);
+                ctx.arc(e2.x, e2.y, eyeR, 0, Math.PI * 2);
+                ctx.fill();
+              }
+            }
+
+            // paused overlay
+            if (this.state === "paused") {
+              ctx.fillStyle = "rgba(0,0,0,0.55)";
+              ctx.fillRect(0, 0, cssW, cssH);
+              ctx.fillStyle = "rgba(255,255,255,0.92)";
+              ctx.font = "800 28px ui-sans-serif, system-ui";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText("已暂停", cssW / 2, cssH / 2 - 10);
+              ctx.font = "600 14px ui-sans-serif, system-ui";
+              ctx.fillStyle = "rgba(255,255,255,0.75)";
+              ctx.fillText("按 Space 继续", cssW / 2, cssH / 2 + 18);
+            }
+          }
+        }
+
+        new SnakeGame();
+      })();
+    </script>
+  </body>
+</html>
