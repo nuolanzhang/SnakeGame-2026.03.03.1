@@ -1,0 +1,898 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>去水印解析下载</title>
+    <style>
+      :root {
+        --bg0: #050814;
+        --bg1: #111827;
+        --panel: rgba(15, 23, 42, 0.92);
+        --panel-soft: rgba(15, 23, 42, 0.82);
+        --border: rgba(148, 163, 184, 0.35);
+        --border-subtle: rgba(148, 163, 184, 0.2);
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --accent: #22d3ee;
+        --accent-soft: rgba(34, 211, 238, 0.15);
+        --danger: #fb7185;
+        --radius-lg: 18px;
+        --radius-md: 12px;
+        --shadow-lg: 0 24px 80px rgba(15, 23, 42, 0.9);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(1200px 700px at -10% 0%, rgba(56, 189, 248, 0.24), transparent 60%),
+          radial-gradient(900px 600px at 110% 10%, rgba(244, 114, 182, 0.25), transparent 55%),
+          radial-gradient(900px 600px at 50% 120%, rgba(59, 130, 246, 0.26), transparent 55%),
+          linear-gradient(135deg, var(--bg0), var(--bg1));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+      }
+
+      .shell {
+        width: min(980px, 100%);
+        max-height: 100%;
+        border-radius: 24px;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.12), transparent 60%)
+            border-box,
+          radial-gradient(circle at 100% 0, rgba(244, 114, 182, 0.1), transparent 55%) border-box,
+          linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.96)) padding-box;
+        box-shadow: var(--shadow-lg);
+        padding: 1px;
+        overflow: hidden;
+      }
+
+      .inner {
+        padding: 20px 20px 18px;
+        backdrop-filter: blur(20px);
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.1fr);
+        gap: 18px;
+      }
+
+      @media (max-width: 900px) {
+        .inner {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .titleBlock h1 {
+        margin: 0;
+        font-size: 22px;
+        letter-spacing: 0.2px;
+      }
+
+      .titleBlock p {
+        margin: 4px 0 0;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .pill {
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.38);
+        background: rgba(15, 23, 42, 0.9);
+        font-size: 11px;
+        color: var(--muted);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .pillDot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.32);
+      }
+
+      .passwordCard {
+        margin-bottom: 14px;
+        padding: 12px 14px;
+        border-radius: var(--radius-lg);
+        border: 1px dashed rgba(148, 163, 184, 0.6);
+        background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.18), transparent 65%)
+            border-box,
+          radial-gradient(circle at 100% 0, rgba(244, 114, 182, 0.16), transparent 60%) border-box,
+          linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.92)) padding-box;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .passwordRow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .passwordRow label {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .passwordRow input {
+        flex: 1 1 140px;
+        min-width: 0;
+      }
+
+      .hintText {
+        font-size: 12px;
+        color: rgba(148, 163, 184, 0.9);
+      }
+
+      .errorText {
+        font-size: 12px;
+        color: var(--danger);
+      }
+
+      .lockedMask {
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: radial-gradient(circle at 50% 0, rgba(15, 23, 42, 0.5), transparent 60%),
+          linear-gradient(180deg, rgba(15, 23, 42, 0.94), rgba(15, 23, 42, 0.98));
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 26px 20px 20px;
+        gap: 12px;
+      }
+
+      .lockedMask h2 {
+        margin: 0;
+        font-size: 20px;
+      }
+
+      .lockedMask p {
+        margin: 0;
+        max-width: 320px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .mainCard {
+        position: relative;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        background: linear-gradient(150deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.96));
+        padding: 14px 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        overflow: hidden;
+      }
+
+      .mainCard.locked > *:not(.lockedMask) {
+        filter: blur(3px);
+        pointer-events: none;
+        user-select: none;
+      }
+
+      .labelRow {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .labelRow span {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .labelRow small {
+        font-size: 11px;
+        color: rgba(148, 163, 184, 0.9);
+      }
+
+      textarea,
+      input[type="text"],
+      input[type="password"] {
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-subtle);
+        background: var(--panel-soft);
+        color: var(--text);
+        font: inherit;
+        padding: 9px 10px;
+        outline: none;
+        transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease,
+          transform 120ms ease;
+      }
+
+      textarea {
+        min-height: 96px;
+        resize: vertical;
+      }
+
+      textarea::placeholder,
+      input::placeholder {
+        color: rgba(148, 163, 184, 0.8);
+      }
+
+      textarea:focus,
+      input:focus {
+        border-color: rgba(34, 211, 238, 0.8);
+        box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.4);
+        background: rgba(15, 23, 42, 0.96);
+        transform: translateY(-0.5px);
+      }
+
+      .actionsRow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .leftActions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .rightHint {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      button {
+        appearance: none;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.6);
+        background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.2), transparent 55%),
+          radial-gradient(circle at 100% 0, rgba(59, 130, 246, 0.24), transparent 60%),
+          linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.96));
+        color: var(--text);
+        padding: 9px 15px;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease,
+          background 120ms ease, opacity 100ms ease;
+        white-space: nowrap;
+      }
+
+      button.primary {
+        border-color: rgba(56, 189, 248, 0.75);
+        background: linear-gradient(135deg, #22d3ee, #0ea5e9);
+        color: #0f172a;
+        box-shadow:
+          0 16px 40px rgba(14, 165, 233, 0.42),
+          0 0 0 1px rgba(15, 23, 42, 0.9) inset;
+      }
+
+      button.secondary {
+        background: rgba(15, 23, 42, 0.95);
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: default;
+        box-shadow: none;
+        transform: none;
+      }
+
+      button:not(:disabled):hover {
+        transform: translateY(-1px);
+        box-shadow:
+          0 16px 40px rgba(15, 23, 42, 0.9),
+          0 0 0 1px rgba(148, 163, 184, 0.6) inset;
+      }
+
+      button.primary:not(:disabled):hover {
+        box-shadow:
+          0 18px 46px rgba(14, 165, 233, 0.6),
+          0 0 0 1px rgba(15, 23, 42, 0.9) inset;
+      }
+
+      button:active {
+        transform: translateY(0);
+        box-shadow: none;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 3px 9px;
+        border: 1px solid rgba(148, 163, 184, 0.5);
+        font-size: 11px;
+        color: var(--muted);
+        background: rgba(15, 23, 42, 0.9);
+      }
+
+      .chipDot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+      }
+
+      .chipDot.ok {
+        background: #22c55e;
+      }
+
+      .chipDot.err {
+        background: #fb7185;
+      }
+
+      .statusText {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .statusText strong {
+        color: var(--text);
+      }
+
+      .statusText.error strong {
+        color: var(--danger);
+      }
+
+      .resultCard {
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.12), transparent 55%)
+            border-box,
+          linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.96)) padding-box;
+        padding: 14px 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .resultHeader {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .resultHeader span {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .titleLine {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+        word-break: break-all;
+      }
+
+      .titleLine small {
+        display: block;
+        font-weight: 400;
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+
+      .previewRow {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr);
+        gap: 12px;
+        align-items: start;
+      }
+
+      @media (max-width: 900px) {
+        .previewRow {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+
+      .previewBox {
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        border: 1px solid var(--border-subtle);
+        background: radial-gradient(circle at 0 0, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.98));
+        min-height: 140px;
+        position: relative;
+      }
+
+      .previewBox .placeholder {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .previewBox img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .fieldGroup {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 12px;
+      }
+
+      .fieldLabel {
+        color: var(--muted);
+      }
+
+      .fieldValue {
+        word-break: break-all;
+        padding: 7px 9px;
+        border-radius: var(--radius-md);
+        background: rgba(15, 23, 42, 0.95);
+        border: 1px solid var(--border-subtle);
+        font-size: 12px;
+      }
+
+      .downloadRow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 16px;
+        transform: translateX(-50%);
+        background: rgba(15, 23, 42, 0.96);
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.7);
+        padding: 8px 14px;
+        font-size: 13px;
+        color: var(--text);
+        box-shadow: 0 14px 40px rgba(15, 23, 42, 0.9);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 160ms ease, transform 160ms ease;
+        transform-origin: center;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(-2px);
+      }
+
+      .toastDot {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        background: #22c55e;
+      }
+
+      .smallMuted {
+        font-size: 11px;
+        color: rgba(148, 163, 184, 0.9);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="inner">
+        <section>
+          <header class="header">
+            <div class="titleBlock">
+              <h1>去水印解析下载</h1>
+              <p>粘贴抖音分享文案，一键提取无水印视频和封面。</p>
+            </div>
+            <div class="pill">
+              <span class="pillDot"></span>
+              <span>无需登录 · 仅密码访问</span>
+            </div>
+          </header>
+
+          <div class="passwordCard">
+            <div class="passwordRow">
+              <label for="passwordInput">访问密码（必填）</label>
+              <input
+                id="passwordInput"
+                type="password"
+                placeholder="请输入访问密码：123456"
+                autocomplete="off"
+              />
+              <button id="unlockBtn" class="secondary">解锁</button>
+            </div>
+            <div id="passwordHint" class="hintText">当前仅设置一个固定密码：123456</div>
+            <div id="passwordError" class="errorText" style="display: none"></div>
+          </div>
+
+          <div id="mainCard" class="mainCard locked">
+            <div class="lockedMask" id="lockedMask">
+              <h2>输入密码后解锁解析功能</h2>
+              <p>为避免被大量恶意请求，这里加了一层简单的访问密码，正确输入即可使用。</p>
+            </div>
+
+            <div class="labelRow">
+              <span>抖音分享文案 / 链接</span>
+              <small>支持整段分享文字，自动识别其中的链接</small>
+            </div>
+            <textarea
+              id="rawInput"
+              placeholder="示例：3.58 复制打开抖音，看看【吾画不画的作品】你会给你女朋友剥虾吗？# 徐明浩 # 爱情 # 清... https://v.douyin.com/PggiM2XB00Q/ K@j.PK ytr:/ 08/14"
+            ></textarea>
+
+            <div class="actionsRow">
+              <div class="leftActions">
+                <button id="parseBtn" class="primary" disabled>
+                  <span>开始解析</span>
+                </button>
+                <button id="pasteBtn" type="button" class="secondary">一键粘贴</button>
+                <span id="regexStatus" class="statusText">
+                  <strong>链接状态：</strong><span id="regexStatusText">等待输入</span>
+                </span>
+              </div>
+              <div class="rightHint">
+                正则将自动提取文本中的第一个 <code>http/https</code> 链接。
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside>
+          <div class="resultCard">
+            <div class="resultHeader">
+              <span>解析结果预览</span>
+              <div class="chip" id="apiStatusChip">
+                <span class="chipDot" id="apiStatusDot"></span>
+                <span id="apiStatusText">未请求</span>
+              </div>
+            </div>
+
+            <div class="titleLine" id="titleLine">
+              暂无数据
+              <small>点击左侧「开始解析」后，这里会展示标题和封面预览。</small>
+            </div>
+
+            <div class="previewRow">
+              <div class="previewBox" id="coverPreviewBox">
+                <div class="placeholder">封面加载中 / 等待解析</div>
+              </div>
+              <div class="fieldGroup">
+                <div>
+                  <div class="fieldLabel">短链接（解析用）</div>
+                  <div class="fieldValue" id="shortUrlField">-</div>
+                </div>
+                <div>
+                  <div class="fieldLabel">视频直链 / 资源地址</div>
+                  <div class="fieldValue" id="videoUrlField">-</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="downloadRow">
+              <button id="downloadCoverBtn" class="secondary" disabled>下载封面</button>
+              <button id="downloadVideoBtn" class="secondary" disabled>下载视频</button>
+            </div>
+
+            <div class="smallMuted">
+              下载为前端行为：会尝试通过浏览器拉取资源并触发保存，若跨域受限则会直接打开资源链接，可手动另存为。
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite">
+      <span class="toastDot"></span>
+      <span id="toastText"></span>
+    </div>
+
+    <script>
+      (function () {
+        "use strict";
+
+        const PASSWORD = "123456";
+        const API_BASE =
+          "https://api.guijianpan.com/waterRemoveDetail/xxmQsyByAk?ak=c329041c198844a2872c83ee025b4b84&link=";
+
+        const $ = (id) => document.getElementById(id);
+
+        const passwordInput = $("passwordInput");
+        const unlockBtn = $("unlockBtn");
+        const passwordHint = $("passwordHint");
+        const passwordError = $("passwordError");
+        const mainCard = $("mainCard");
+        const lockedMask = $("lockedMask");
+
+        const rawInput = $("rawInput");
+        const parseBtn = $("parseBtn");
+        const pasteBtn = $("pasteBtn");
+        const regexStatusText = $("regexStatusText");
+
+        const apiStatusChip = $("apiStatusChip");
+        const apiStatusDot = $("apiStatusDot");
+        const apiStatusText = $("apiStatusText");
+        const titleLine = $("titleLine");
+        const coverPreviewBox = $("coverPreviewBox");
+        const shortUrlField = $("shortUrlField");
+        const videoUrlField = $("videoUrlField");
+        const downloadCoverBtn = $("downloadCoverBtn");
+        const downloadVideoBtn = $("downloadVideoBtn");
+
+        const toastEl = $("toast");
+        const toastText = $("toastText");
+
+        let currentCoverUrl = "";
+        let currentVideoUrl = "";
+        let lastParsedLink = "";
+        let toastTimer = 0;
+
+        function showToast(msg) {
+          clearTimeout(toastTimer);
+          toastText.textContent = msg;
+          toastEl.classList.add("show");
+          toastTimer = window.setTimeout(() => {
+            toastEl.classList.remove("show");
+          }, 1700);
+        }
+
+        function setLocked(locked) {
+          if (locked) {
+            mainCard.classList.add("locked");
+            lockedMask.style.display = "flex";
+            parseBtn.disabled = true;
+          } else {
+            mainCard.classList.remove("locked");
+            lockedMask.style.display = "none";
+            updateLinkState();
+          }
+        }
+
+        function handleUnlock() {
+          const v = (passwordInput.value || "").trim();
+          if (!v) {
+            passwordError.style.display = "block";
+            passwordError.textContent = "请输入访问密码。";
+            return;
+          }
+          if (v !== PASSWORD) {
+            passwordError.style.display = "block";
+            passwordError.textContent = "密码错误，请重试。";
+            passwordInput.focus();
+            passwordInput.select();
+            return;
+          }
+          passwordError.style.display = "none";
+          passwordHint.textContent = "验证通过，解析功能已解锁。";
+          passwordHint.style.color = "#22c55e";
+          setLocked(false);
+          showToast("密码验证成功，可以开始解析了。");
+        }
+
+        unlockBtn.addEventListener("click", handleUnlock);
+        passwordInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            handleUnlock();
+          }
+        });
+
+        const linkRegex = /(https?:\/\/[^\s]+)/i;
+
+        function extractFirstLink(text) {
+          if (!text) return "";
+          const m = text.match(linkRegex);
+          if (!m) return "";
+          const url = m[1].trim();
+          return url.replace(/[。！，；：,.!?]+$/, "");
+        }
+
+        function updateLinkState() {
+          if (mainCard.classList.contains("locked")) {
+            regexStatusText.textContent = "功能未解锁";
+            parseBtn.disabled = true;
+            return;
+          }
+          const text = rawInput.value;
+          const link = extractFirstLink(text);
+          lastParsedLink = link;
+          if (!text.trim()) {
+            regexStatusText.textContent = "等待输入";
+            parseBtn.disabled = true;
+          } else if (!link) {
+            regexStatusText.textContent = "未识别到 http/https 链接";
+            parseBtn.disabled = true;
+          } else {
+            regexStatusText.textContent = "已提取链接：" + link;
+            parseBtn.disabled = false;
+          }
+        }
+
+        rawInput.addEventListener("input", () => {
+          updateLinkState();
+        });
+
+        pasteBtn.addEventListener("click", async () => {
+          if (!navigator.clipboard || !navigator.clipboard.readText) {
+            showToast("当前浏览器不支持直接读取剪贴板，请手动粘贴。");
+            return;
+          }
+          try {
+            const text = await navigator.clipboard.readText();
+            if (!text) {
+              showToast("剪贴板为空，请先复制抖音分享文案。");
+              return;
+            }
+            rawInput.value = text;
+            updateLinkState();
+            showToast("已粘贴剪贴板内容。");
+          } catch (err) {
+            console.error(err);
+            showToast("无法读取剪贴板，请手动粘贴。");
+          }
+        });
+
+        function setApiStatus(status, message) {
+          apiStatusText.textContent = message;
+          apiStatusDot.className = "chipDot " + (status === "ok" ? "ok" : "err");
+          apiStatusChip.style.opacity = "1";
+        }
+
+        function resetResultView() {
+          titleLine.innerHTML =
+            '暂无数据<small>点击左侧「开始解析」后，这里会展示标题和封面预览。</small>';
+          coverPreviewBox.innerHTML =
+            '<div class="placeholder">封面加载中 / 等待解析</div>';
+          shortUrlField.textContent = "-";
+          videoUrlField.textContent = "-";
+          downloadCoverBtn.disabled = true;
+          downloadVideoBtn.disabled = true;
+          currentCoverUrl = "";
+          currentVideoUrl = "";
+        }
+
+        async function downloadByUrl(url, suggestedName) {
+          if (!url) return;
+          try {
+            const res = await fetch(url, { mode: "cors" });
+            if (!res.ok) throw new Error("网络错误：" + res.status);
+            const blob = await res.blob();
+            const a = document.createElement("a");
+            const objectUrl = URL.createObjectURL(blob);
+            a.href = objectUrl;
+            a.download = suggestedName || "";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(objectUrl);
+          } catch (err) {
+            console.warn("blob 下载失败，尝试直接打开链接", err);
+            const a = document.createElement("a");
+            a.href = url;
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          }
+        }
+
+        parseBtn.addEventListener("click", async () => {
+          const link = lastParsedLink || extractFirstLink(rawInput.value);
+          if (!link) {
+            showToast("未识别到有效链接，请检查输入。");
+            return;
+          }
+
+          parseBtn.disabled = true;
+          parseBtn.textContent = "解析中...";
+          setApiStatus("ok", "请求中...");
+          showToast("正在调用接口解析，请稍候...");
+
+          try {
+            const url = API_BASE + encodeURIComponent(link);
+            const res = await fetch(url);
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            const data = await res.json();
+
+            if (!data || data.code !== "10000" || !data.content || data.content.success !== true) {
+              setApiStatus("err", "解析失败");
+              showToast("接口返回失败，请检查链接是否有效。");
+              return;
+            }
+
+            const c = data.content;
+            const title = c.title || "未返回标题";
+            const cover = c.cover || "";
+            const vUrl = c.url || "";
+            const shortUrl = c.shortUrl || c.originText || link;
+
+            currentCoverUrl = cover;
+            currentVideoUrl = vUrl;
+
+            titleLine.innerHTML =
+              title +
+              (c.type ? ' <small>类型：' + c.type + "</small>" : "") +
+              (c.author ? ' <small>作者：' + c.author + "</small>" : "");
+
+            if (cover) {
+              coverPreviewBox.innerHTML =
+                '<img src="' +
+                cover.replace(/"/g, "&quot;") +
+                '" alt="封面预览" loading="lazy" />';
+            } else {
+              coverPreviewBox.innerHTML =
+                '<div class="placeholder">未返回封面地址</div>';
+            }
+
+            shortUrlField.textContent = shortUrl;
+            videoUrlField.textContent = vUrl || "未返回视频地址";
+
+            downloadCoverBtn.disabled = !cover;
+            downloadVideoBtn.disabled = !vUrl;
+
+            setApiStatus("ok", "解析成功");
+            showToast("解析成功，可以下载视频和封面。");
+          } catch (err) {
+            console.error(err);
+            setApiStatus("err", "请求异常");
+            showToast("调用接口失败，请稍后重试。");
+          } finally {
+            parseBtn.disabled = false;
+            parseBtn.textContent = "开始解析";
+          }
+        });
+
+        downloadCoverBtn.addEventListener("click", () => {
+          if (!currentCoverUrl) return;
+          downloadByUrl(currentCoverUrl, "cover.jpg");
+        });
+
+        downloadVideoBtn.addEventListener("click", () => {
+          if (!currentVideoUrl) return;
+          downloadByUrl(currentVideoUrl, "video.mp4");
+        });
+
+        resetResultView();
+        setApiStatus("err", "未请求");
+        setLocked(true);
+      })();
+    </script>
+  </body>
+</html>
+
